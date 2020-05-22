@@ -190,12 +190,13 @@ def goodidea1(stonk,ts):     #oh yeah? WAS IT?     #option, purchase time
                 return True
     return False
             
-    
-
+def goodidea2(stonkstr,timestr):
+    return goodidea1(cftoopt(stonkstr),datetots(timestr))
 
 
 if(__name__=="__main__"):
-    print(goodidea1(cftoopt(sys.argv[1]),datetots(sys.argv[2])))
+    #print(goodidea1(cftoopt(sys.argv[1]),datetots(sys.argv[2])))
+    print(goodidea2(sys.argv[1],sys.argv[2]))
     #try: python goodidea.py "A 6/19/20 82.5 C" "5/10/20"
     #the first argument is, duh, the details of the thingy
     #the second argument is the purchase date of the option
