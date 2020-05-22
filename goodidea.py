@@ -171,14 +171,11 @@ def cftoopt(cf):    #clusterfuck of some text to a recognizable option.
 
 def goodidea1(stonk,ts):     #oh yeah? WAS IT?     #option, purchase time
     ticker = re.findall("[A-Z]+",stonk)[0]
-    print(stonk)
-    print(ts)
     
     span = int((1000*time.time()-ts)/(1000*3600*24))      #A*?????????? NO WAY!!!!!!!!!
     chartlen = stretchdist(span)
     sticklen = candlelen(chartlen)
     td = getChartDf(stonk, sticklen, chartlen)  #THEDATA
-    print(td)
     ts = closestts(td,ts)
     #print(td)
     p = 0.0
