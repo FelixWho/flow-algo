@@ -15,7 +15,7 @@ import time
 uri = "wss://services.thinkorswim.com/Services/WsJson"
 
 #ADD TOKEN
-token = ""
+token = "lGLVxSYeqihgpJEFIlBRxAIxWq_vT0rr"
 
 sessionPayload = {"ver":  "25.*.*", "fmt": "json-patches", "heartbeat": "2s"}
 loginPayload = {"payload": [{"service":"login",
@@ -225,10 +225,12 @@ def getChartDf(ticker, aggregationPeriod, period):
 	return df
 
 if __name__ == "__main__":
-
+	t = time.time()
 	df = getChartDf(".INTC200221C67.5", "DAY", "YEAR1")
 
-	#print(df.head())
+	print(df.head())
+	s = time.time()
+	print(s-t)
 
 
 
