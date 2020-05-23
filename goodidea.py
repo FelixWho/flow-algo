@@ -1,3 +1,11 @@
+#EXAMPLE FUNCTION CALL: python goodidea.py "6/19/20 SPY 62.5 C" "3/23/20 11:53:04"
+#some notes...the first argument is pretty flexible, you can do "SPY 62.5C 6/19/20" or whatever you want. but make sure it's in m/d/Y format (or m-d-Y)!!! I don't even know if it works for 6/19/2020 anymore.
+#the time zone is considered to be your time zone, NOT gmt. if you want to do gmt, replace datetots with datetots2 (probably in another file) in goodidea2.
+
+#it tells you if buying that option ($1) was profitable at that time ($2). 
+
+#this shit's a fucking pain in the ass. I'm telling you. I had sooooo much trouble parsing dates and shit. don't even bother looking at the code, you'll throw up.
+
 from tosws import *
 import time
 import string
@@ -84,6 +92,27 @@ def criteria(r,p):  #row, price paid
         return True
     return False
 
+def stopcriteria1(r,p,fcrit):        #further criteria for stopping
+    number = (float(r["high"])+float(r["low"]))/2
+    if(fcrit(p,number)):
+        return True
+    return False
+
+def stopgain(r,p,g):                #g is the fraction that we GAIN. g=0.5 means 50% gain, g=1.5 means 150% gain.
+    number = (float(r["high"])+float(r["low"]))/2
+    return stopcriteria1(r,p,lambda x,num : x*(1+g)<num)
+
+def stoploss(r,p,l):                #l is the fraction that we LOSE. l=0.3 means 30% loss
+    number = (float(r["high"])+float(r["low"]))/2
+    return stopcriteria1(r,p,lambda x,num : x*(1-l)>num)
+
+
+def losscriteria(r,p,fcrit):        #further criteria
+    number = (float(r["high"])+float(r["low"]))/2
+    if(number<=p*0.5):
+        return True
+    return False
+
 def closestts(df,ts):           #just throw in a random time...don't worry, the code will fix it for you...
     min = abs(df.iloc[0]["timestamps"]-ts)
     ans = 0
@@ -96,10 +125,7 @@ def closestts(df,ts):           #just throw in a random time...don't worry, the 
 
 def datetots(dat):      #I am going to TEAR my eyes out PROBABLY while writing this.    EDIT: nvm
     #ASSUMING TIME ZONE IS CENTRAL ~~~ SO THE DAY STARTS AT 6 AM, NO? = 6*3600 INCREASE BABY...wait wtf this is gonna hurt my head
-    timediff = str(datetime.utcnow()-datetime.now())
-    h,m,s = timediff.split(":")
-    tzcorrection = int(h)*3600+int(m)*60+int(s)     #correcting for timezone
-    tzcorrection = 1000*tzcorrection
+    
     timecorrection = 0
     if(":" in dat):
         tim = re.findall("[0-9]?[0-9]:[0-9]?[0-9]:?[0-9]?[0-9]?",dat)[0].split(":")
@@ -113,7 +139,7 @@ def datetots(dat):      #I am going to TEAR my eyes out PROBABLY while writing t
     #okay, so you send in 5/21/20 1:34. what you WANT is that.
     #basetime gives you 5/21/20 6:00 AM, so you correct with -tzcorrection. then add timecorrection. got it?
 
-    return basetime-tzcorrection+timecorrection
+    return basetime+timecorrection
 
 def blegh(s):
     if(int(s)<5):
@@ -171,13 +197,11 @@ def cftoopt(cf):    #clusterfuck of some text to a recognizable option.
 
 def goodidea1(stonk,ts):     #oh yeah? WAS IT?     #option, purchase time
     ticker = re.findall("[A-Z]+",stonk)[0]
-    
     span = int((1000*time.time()-ts)/(1000*3600*24))      #A*?????????? NO WAY!!!!!!!!!
     chartlen = stretchdist(span)
     sticklen = candlelen(chartlen)
     td = getChartDf(stonk, sticklen, chartlen)  #THEDATA
     ts = closestts(td,ts)
-    #print(td)
     p = 0.0
     for i in range(len(td)):
         
@@ -202,3 +226,4 @@ if(__name__=="__main__"):
     #the second argument is the purchase date of the option
     #feel free to include a time, e.g. either "5/10/20 11:23" or "5/10/20" works
     #(1:34 -> 13:34,2:34 -> 14:34,..., 4:34 -> 16:34, 5:34 -> 5:34, cause I'm lazy like that)
+    print("")

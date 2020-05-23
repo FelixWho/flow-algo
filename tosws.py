@@ -15,7 +15,7 @@ import time
 uri = "wss://services.thinkorswim.com/Services/WsJson"
 
 #ADD TOKEN
-token = "lGLVxSYeqihgpJEFIlBRxAIxWq_vT0rr"
+token = "lG0JYGsBMLTBrEZHuJeR9F247BY6xQKf"
 
 sessionPayload = {"ver":  "25.*.*", "fmt": "json-patches", "heartbeat": "2s"}
 loginPayload = {"payload": [{"service":"login",
@@ -216,7 +216,6 @@ def getChartDf(ticker, aggregationPeriod, period):
 	if jsonData is None: return
 
 	df = pd.DataFrame()
-
 	for col in ['timestamps', 'open', 'high', 'low', 'close', 'volume']: 
 		df[col] = jsonData[col]
 

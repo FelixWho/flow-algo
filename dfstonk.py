@@ -1,3 +1,5 @@
+#takes in a csv ($1) and prints out which of the guys were profitable (using goodidea2)
+#EXAMPLE FUNCTION CALL: python dfstonk.py bigpenisplays.csv
 from goodidea import *
 #try: python goodidea.py "A 6/19/20 82.5 C" "5/10/20"
 #or: goodidea2($1,$2) of the equivalent
@@ -48,7 +50,9 @@ def stocksgood(df):
     return ans
 
 
+
+
 if __name__=="__main__":
-    df = pd.read_csv("test2.csv")
+    df = pd.read_csv(sys.argv[1])
     print(optsgood(df))
     
