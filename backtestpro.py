@@ -1,6 +1,7 @@
 #bro chill I'm still working on this one
 import time
 from fadata import *
+import itertools
 #RECALL: goodidea3 takes in a json row.
 
 def daystocks(df):  #given the array of json objects, find all stocks which flowalgo mentioned today and their indices
@@ -349,22 +350,31 @@ def criteriatest(sl):           #in which we test that the functions can actuall
         #01-06-20: HD call
 
 
-def criteriatest2(day):  #in which we try to automatically run through criteria
-    data = flowdata('2020-01-13')
-    ans = []
-    ctest2 = {
+ctest2 = {
         0: [[intersect,[[smallesttie, expts, gt],[smallestn, orderts,gt,4],[filter,voi]]],
             [allof,[[atleastn, betAtLeast100K, 1],[atleastn, betAtLeast50K, 2],[oneof,[[atleastn,isPut,3],[atleastn,isCall,3]]]]]]
     }
-    crittie = ctest2.get(0)
+
+def criteriaopts(day,critt):  #runs through all the criteria in critt and gets all opts which fit it on a given day
+    data = flowdata(day)
+    ans = []
+    crittie = critt
     #data = sl
     df = daystocks(data)
     for i in df:
+        broke = True
         stock = i
         rl = df.get(i)
         #df.get(i) returns rl
-        a = unpack(crittie[0] + [data] + [rl])
-        if(unpack(crittie[1] + [data] + [a])):
+        a = rl
+        for j in crittie:
+            for k in crittie.get(j):
+                if(k[0]([],data,rl)==[] or k[0]([],data,rl)==[]):   #??
+                    a = unpack(k+[data]+[a])
+                else:
+                    if(not unpack(k+[data]+[a])):
+                        broke = False
+        if(broke):
             if(majoritycall(data,a)):
                 for j in a:
                     if(isCall(data[j])):
@@ -378,16 +388,114 @@ def criteriatest2(day):  #in which we try to automatically run through criteria
     return ans
 #N.B. YOU CAN RUN THIS THROUGH GOODIDEA4
 
+def criteriastocks(day,critt):  #runs through all the criteria in critt and gets all stocks (as well as direction) which fit it on a given day
+    
+    try:
+        data = flowdata(day)
+    except:
+        return []               #BIGLY IMPORTANT: MAYBE WE WANT TO DO DAY = YESTERDAY() OR SOME SHIT INSTEAD?
+    ans = []
+    crittie = critt
+    #data = sl
+    df = daystocks(data)
+    for i in df:
+        broke = True
+        stock = i
+        rl = df.get(i)
+        #df.get(i) returns rl
+        a = rl
+        for j in crittie:
+            for k in crittie.get(j):
+                if(k[0]([],data,rl)==[] or k[0]([],data,rl)==[]):   #??
+                    a = unpack(k+[data]+[a])
+                else:
+                    if(not unpack(k+[data]+[a])):
+                        broke = False
+        if(len(a)>0):
+            if(broke):
+                if(majoritycall(data,a)):
+                    ans.append([i,"C"])
+                else:
+                    ans.append([i,"P"])
+    return ans
+
+def whittle(stockl,optl):   #given a list of stocks (output of criteriastocks) and a list of options (output), removes the options which don't have a stock represented in the stocks
+    #as in: [["B1","C"],["B2","C"],["B3","P"]],[["1/1/20 B1 6P","13:00:00"],["1/1/20 B2 6C","13:00:00"],["1/1/20 B4 6P","13:00:00"]]
+    #will only return [["1/1/20 B2 C","13:00:00"]] because that is the only option which is represented in the first list by both stock and direction
+    ans = []
+    for i in optl:
+        stock = re.findall("[A-Z]+",i[0])[0]
+        direct = re.findall("[A-Z]+",i[0])[1]
+        right = [stock,direct]
+        if right in stockl:
+            ans.append(i)
+    return ans
+
+def whittleunion(stockll,optl): #does the same thing as whittle but it could be over lots of things, i.e. stockl is now a list of list of lists.
+    ans = []
+    for i in optl:
+        stock = re.findall("[A-Z]+",i[0])[0]
+        direct = re.findall("[A-Z]+",i[0])[1]
+        right = [stock,direct]
+        for j in stockll:
+            if right in j:
+                ans.append(i)
+    return uniquell(ans)
+
+def uniquell(x):       #gets rid of duplicate elements in a list of lists
+    ll = x
+    ll.sort()
+    return list(ll for ll,_ in itertools.groupby(ll))
+
+
+def optscrit(day,critt):        #with support for other days now!!!!
+    optsl = criteriaopts(day,{0:critt.get(0)})
+    stocksll = []
+    for i in critt:
+        todat = day
+        if(i>0):
+            
+            for j in range(i):
+                todat = yesterday(day)
+                stocksll.append(criteriastocks(todat,{i: critt.get(i)}))
+    #if(unique(stocksll)==[[]]):
+    if(stocksll==[]):
+        return []
+    #print(stocksll)
+    for i in stocksll:
+        optsl = whittle(i,optsl)
+    return optsl
+
+def optscritweak(day,critt):    #see comments right below this
+    optsl = criteriaopts(day,{0:critt.get(0)})
+    stocksll = []
+    for i in critt:
+        todat = day
+        if(i>0):
+            for j in range(i):
+                todat = yesterday(day)
+                stocksll.append(criteriastocks(todat,{i: critt.get(i)}))
+    return whittleunion(stocksll,optsl)
+
+#WHAT IS THE DIFFERENCE BETWEEN OPTSCRITWEAK AND OPTSCRIT?
+#OPTSCRIT requires that a stock/direction appear in EVERY past query
+#OPTSCRITWEAK requires that it only appear at least once.
+#if you wanted to see "did this option have V>OI at least once in the last 3 days?" use optscritweak.
+
+#the difference is completely nonexistent if your criteria only includes stuff from either 0 or 1 days
 
 
 
 if __name__=="__main__":
     #the length of a typical flowalgo dataset is 100-1000 JSON datasets. 
     #So, we don't have to care too hard about optimization.
-    data = flowdata('2020-01-13')
+    #data = flowdata('2004-01-13')
+    #p = criteriaopts('2020-01-13',{0: ctest2.get(0)})
+    #s = criteriastocks('2020-01-13',ctest2.get(0))
+    ctest3 = {
+        0: [[intersect,[[smallesttie, expts, gt],[smallestn, orderts,gt,4],[filter,voi]]],
+            [allof,[[atleastn, betAtLeast100K, 1],[atleastn, betAtLeast50K, 2],[oneof,[[atleastn,isPut,3],[atleastn,isCall,3]]]]]],
 
-    s = criteriatest2(data)
-    print(s)
-    #for i in s:
-    #    if(goodidea4(i[0],i[1],0.1,0.5)):
-    #        print(i)
+        1: [[intersect,[[filter,voi]]]]
+    }
+    print(optscrit("2020-01-13",ctest3))
