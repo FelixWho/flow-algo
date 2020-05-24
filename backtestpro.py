@@ -9,7 +9,7 @@ import itertools
 banned = ['BRK/B','SPY',"DIA","DXJ","EWJ","EWU","EWW","EWY","EWZ","FAS","IBB",
             "IEF","IGV","INDA","ITB","IWM","IWO","IYR","KRE","LQD","QQQ","TQQQ","SDOW","SH",
             "SPX","SVXY","SXPL",
-			"TLT","UPRO","UVXY","XBI","XLB","XLC","XLE","XLF","XLI",
+			"TLT","UPRO","UVXY","VXX","XBI","XLB","XLC","XLE","XLF","XLI",
             "XLK","XLP","XLU","XLV","XLY","XME","XOP","XRT"]
 
 def daystocks(df):  #given the array of json objects, find all stocks which flowalgo mentioned today and their indices
@@ -28,6 +28,11 @@ def daystocks(df):  #given the array of json objects, find all stocks which flow
 def flowdata(day):                  #format 2020-04-29, e.g.
     s = 'data_flow2/'+day+".json"
     with open(s,'r') as data_file:
+        json_data = data_file.read()
+    return json.loads(json_data)
+
+def flow(filename):
+    with open(filename,'r') as data_file:
         json_data = data_file.read()
     return json.loads(json_data)
 
@@ -107,7 +112,11 @@ def rowbtwn(a,comp):      #row value is between b and c (inclusive)
 
 betAtLeast = rowgt("option_bet_size",gt)
 qtyAtLeast = rowgt("option_contract_amount",gt)
+
 #add delta, blah blah, whatever you want
+
+def betSize(row):
+    return row.get("acf").get("option_bet_size")
 
 def mon(uggo): #ill let u guess what this does ;)
     ans = ["JAN","FEB","MAR",'APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
@@ -181,6 +190,9 @@ def rowoneof(flist,data,rl):
 #SO TECHNICALLY YOU GOTTA DO FOR KEY IN DAYSTOCKS(DF) BUT THAT'S NOT SO HARD
 #NB:
 
+def invert(crit,df,rl):         #gets everything that DOESN'T fit the criteria.
+    return list(set(rl)-set(applycrit(crit,df,rl)))
+
 def filter(crit,df,rl):    #N.B. you'll need something like betatleast1 = lambda row : betAtLeast(row,5000)
     ans = []                #'cause filter(a,b,blah(5,row)) doesn't work well
     for i in rl:
@@ -210,7 +222,7 @@ def smallesttie(qt,comp,data,rl):      #gets all guys who are tied with the smal
             ans4.append(i)
     return ans4
 
-def biggesttie(qt,comp,data,rl):      #gets all guys who are tied with the smallest thing
+def largesttie(qt,comp,data,rl):      #gets all guys who are tied with the smallest thing
     ans = rl
     ans2 = []
     for i in ans:
@@ -279,7 +291,7 @@ def intersect(flist,data,rl):           #finds the INTERSECTION of a bunch of cr
     if(len(rl)==0):
         return []
     if(len(flist)==0):
-        return []
+        return []  
     ans = applycrit(flist[0],data,rl)
     for i in flist:
         ans = applycrit(i,data,ans)
@@ -351,6 +363,38 @@ def goodidea4(stonk,ts,g,l):     #oh yeah? WAS IT?     #option (in cf format, "6
             if(stopgain(r,p,g)):
                 return True
     return False
+
+def goodidea5(jsob,g,l):
+    stonk = cftoopt(opt(jsob))
+    ts = jsob.get("date_gmt")
+    ts = int(1000*time.mktime(datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S").timetuple()))
+    ticker = re.findall("[A-Z]+",stonk)[0]
+    span = int((1000*time.time()-ts)/(1000*3600*24))      #A*?????????? NO WAY!!!!!!!!!
+    chartlen = stretchdist(span)
+    sticklen = candlelen(chartlen)
+
+    td = getChartDf(stonk, sticklen, chartlen)  #THEDATA
+    ts = closestts(td,ts)
+    p = 0.0
+    for i in range(len(td)):
+        r = td.iloc[i]
+        if(p==0):
+            if(int(r["timestamps"])==int(ts)):
+                p = float(r["open"])/2+float(r["close"])/2  #fuck it, intermediate value theorem on non-continuous functions
+        else:
+            if(stoploss(r,p,l)):
+                return False
+            if(stopgain(r,p,g)):
+                return True
+    return False
+
+def goodideas(fn):
+    ans = []
+    for i in flow(fn):
+        if(goodidea(i)):
+            ans.append(cftoopt(opt(i)))
+    
+    
 #############################################################################
 #okay, so first you're given a date. the date..2020-03-19. Or smth.
 #then you're given a dict of filters. key: # of days ago. 
@@ -416,6 +460,7 @@ def criteriaopts(day,critt):  #runs through all the criteria in critt and gets a
         a = rl
         for j in crittie:
             for k in crittie.get(j):
+                
                 if(k[0]([],data,rl)==[] or k[0]([],data,rl)==[]):   #??
                     a = unpack(k+[data]+[a])
                 else:
@@ -557,7 +602,7 @@ def fastallcritopts(critt):
     for i in range(len(fl)):
         fl[i] = fntodate(fl[i])
     ans = []
-    ranlist = random.sample(range(0,len(fl)),30)   #change this if you want more, duh
+    ranlist = random.sample(range(0,len(fl)),50)   #change this if you want more, duh
     ranlist = [i for i in range(30)]
     for q in ranlist:
         i = fl[q]
@@ -614,10 +659,19 @@ if __name__=="__main__":
         0: [[intersect,[[smallesttie, expts, gt],[smallestn, orderts,gt,4],[filter, voi]]],
             [allof,[[atleastn, betAtLeast100K, 1],[atleastn, betAtLeast50K, 2],[oneof,[[atleastn,isPut,3],[atleastn,isCall,3]]]]]]
     }
-    p = criteriaopts('2020-01-14',{0: ctest2.get(0)})
-    print(p)
-    p = criteriaopts('2020-01-14',{0: ctest4.get(0)})
-    print(p)
+
+    kikiLEvar = {
+        0: [[intersect,[[largestn,betSize,gt,4]]],
+        [allof,[[atleastn,betAtLeast100K,3],[atleastn,betAtLeast50K,4],[atleastn,isSweep,1],[oneof,[[atleastn,isPut,3],[atleastn,isPut,3]]]]]]
+
+    }
+    
+
+
+    #p = criteriaopts('2020-01-14',{0: ctest2.get(0)})
+    #print(p)
+    #p = criteriaopts('2020-01-14',{0: kikiLEvar.get(0)})
+    #print(p)
     #print(optscrit("2017-08-07",ctest2))
 
     #print(data[0])
@@ -626,7 +680,7 @@ if __name__=="__main__":
     #print(allcritopts(ctest2))
     #print(flowdata('2017-06-02'))
     s = time.time()
-    print(fastbacktestpro(ctest2,0.3,0.5))
+    print(backtestpro(kikiLEvar,0.3,0.5))
     e = time.time()
     print(e-s)
     print("")
