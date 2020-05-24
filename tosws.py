@@ -15,7 +15,7 @@ import time
 uri = "wss://services.thinkorswim.com/Services/WsJson"
 
 #ADD TOKEN
-token = ""
+token = "lG0JYGsBMLTBrEZHuJeR9F247BY6xQKf"
 
 sessionPayload = {"ver":  "25.*.*", "fmt": "json-patches", "heartbeat": "2s"}
 loginPayload = {"payload": [{"service":"login",

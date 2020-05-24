@@ -14,6 +14,10 @@ def rexp(jsob):
     return jsob.get("acf").get("option_expiration")
 
 def exp(jsob):
+    s = jsob.get("acf").get("option_expiration").split("/")
+    t = jsob.get("acf").get("option_expiration").split("-")
+    if(len(s)<3 and len(t)<3):
+        return "01/02/1970"
     return murica(jsob.get("acf").get("option_expiration"))
 
 def murica(s):   #Y-M-D to M-D-Y

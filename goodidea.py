@@ -173,7 +173,7 @@ def cftoopt(cf):    #clusterfuck of some text to a recognizable option.
  
     date = re.findall("\d{6}",cf)      #that would be soooo nice if you did it right for me
     if(len(date)==0):
-        date = re.findall("\d?\d[-/]\d?\d[-/]\d?\d",cf)[0]
+        date = re.findall("\d?\d[-/]\d?\d[-/]\d\d\d?\d?",cf)[0]
         date = date.split("/")
         
         if(len(date)==1):
@@ -188,7 +188,7 @@ def cftoopt(cf):    #clusterfuck of some text to a recognizable option.
             date[2] = date[2][-2:]
         date = date[2]+date[0]+date[1]  #did i do that right?
 
-    strike = re.findall("[ A-Za-z]\d+\.?5?[ A-Za-z]",cf)[0]   #if you added .0 to the end I'll kill you
+    strike = re.findall("[ A-Za-z]\d+\.?\d?\d?\d?[ A-Za-z]",cf)[0]
     for i in letters:
         strike = strike.replace(i,'')
     strike = strike.replace(' ','')

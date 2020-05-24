@@ -1,8 +1,16 @@
 #bro chill I'm still working on this one
 import time
 from fadata import *
+import glob
+import random
 import itertools
 #RECALL: goodidea3 takes in a json row.
+
+banned = ['BRK/B','SPY',"DIA","DXJ","EWJ","EWU","EWW","EWY","EWZ","FAS","IBB",
+            "IEF","IGV","INDA","ITB","IWM","IWO","IYR","KRE","LQD","QQQ","TQQQ","SDOW","SH",
+            "SPX","SVXY","SXPL",
+			"TLT","UPRO","UVXY","XBI","XLB","XLC","XLE","XLF","XLI",
+            "XLK","XLP","XLU","XLV","XLY","XME","XOP","XRT"]
 
 def daystocks(df):  #given the array of json objects, find all stocks which flowalgo mentioned today and their indices
     ans = {}
@@ -49,7 +57,15 @@ def sorty(l,qty,comp):
     return l
 
 def gt(a,b):
-    if(float(str(a).replace(',',''))>float(str(b).replace(',',''))):
+    if(not (a and b)):
+        return -1           #idk fam...ur on ur own
+    a = str(a)
+    b = str(b)
+    if(re.search(',',a)):
+        a = a.replace(',','')
+    if(re.search(',',b)):
+        b = b.replace(',','')
+    if(float(a)>float(b)):
         return 1
     if(a==b):
         return 0
@@ -66,6 +82,14 @@ voi0 = rowcompare(gt,"option_contract_amount","option_open_interest")   #v vs. o
 
 def voi(row):       #i give up idk how to do this with lambda functions
     return voi0(row)==1
+    
+#data = flowdata('2017-08-07')
+#zz = data[46].get("acf").get("option_open_interest")
+#if(zz):
+#    print("SHFJDFSFDS")
+#print(data[46].get("id"))
+#print(voi(data[46]))
+
 
 #SPLIT, SWEEP, BLOCK
 def rowmatch(a,b):
@@ -101,14 +125,26 @@ def getoi(row):
     return row.get("acf").get("option_open_interest")
 
 def expts(row):         #expirty timestamp
+    s = row.get("acf").get("option_expiration").split("/")
+    t = row.get("acf").get("option_expiration").split("-")
+    if(len(s)<3 and len(t)<3):
+        return 86400                #KMS
     s = row.get('acf').get('option_expiration')
     s2 = re.findall('[A-Za-z]+',s)
     if(len(s2)>0):
         s2 = s2[0]
         s = s.split('-')
         s2 = mon(s2)
+        
         s = s[0]+"-"+s2+"-"+s[2]    #...........
-
+    s3 = re.findall('/',s)
+    if(len(s3)>0):
+        s3 = s.split("/")
+        s = s3[0]+"/"+s3[1]+"/20"+s3[2]
+        if(len(s)>10):
+            return 86400        #fuck it, fix this later
+        return time.mktime(datetime.strptime(s, "%m/%d/%Y").timetuple())     #what sort of perverted FUCK does this
+        
     return time.mktime(datetime.strptime(s, "%Y-%m-%d").timetuple())
 
 def orderts(row):        #time whne it was ordered timestamp
@@ -122,6 +158,18 @@ def isCall(row):        #IS IT A CALL??
 
 def isPut(row):
     return not isCall(row)
+
+def rowallof(flist,data,rl):               #checks if EVERY criteria is true
+    for i in flist:
+        if(not applycrit(i,data,rl)):
+            return False
+    return True
+
+def rowoneof(flist,data,rl):
+    for i in flist:
+        if(applycrit(i,data,rl)):
+            return True
+    return False
 
 #check the functions in fadata.py for more fun stuff!
 
@@ -338,22 +386,21 @@ def criteriatest(sl):           #in which we test that the functions can actuall
         if(indi5 and indi6 and indi7):
             for j in indi4:
                 if(isCall(data[j])):
-                    ans.append([opt(data[j]),data[j].get("date_gmt")])
-                    break
+                    if(not exp(data[j])=="01/02/1970"):
+                        ans.append([opt(data[j]),data[j].get("date_gmt")])
+                        break
         if(indi5 and indi6 and indi8):
             for j in indi4:
                 if(isPut(data[j])):
-                    ans.append([opt(data[j]),data[j].get("date_gmt")])
-                    break
+                    if(not exp(data[j])=="01/02/1970"):
+                        ans.append([opt(data[j]),data[j].get("date_gmt")])
+                        break
     return ans
         
         #01-06-20: HD call
 
 
-ctest2 = {
-        0: [[intersect,[[smallesttie, expts, gt],[smallestn, orderts,gt,4],[filter,voi]]],
-            [allof,[[atleastn, betAtLeast100K, 1],[atleastn, betAtLeast50K, 2],[oneof,[[atleastn,isPut,3],[atleastn,isCall,3]]]]]]
-    }
+
 
 def criteriaopts(day,critt):  #runs through all the criteria in critt and gets all opts which fit it on a given day
     data = flowdata(day)
@@ -374,17 +421,21 @@ def criteriaopts(day,critt):  #runs through all the criteria in critt and gets a
                 else:
                     if(not unpack(k+[data]+[a])):
                         broke = False
+        if(i in banned):
+            broke = False
         if(broke):
             if(majoritycall(data,a)):
                 for j in a:
                     if(isCall(data[j])):
-                        ans.append([opt(data[j]),data[j].get("date_gmt")])
-                        break
+                        if(not exp(data[j])=="01/02/1970"):
+                            ans.append([opt(data[j]),data[j].get("date_gmt")])
+                            break
             else:
                 for j in a:
                     if(isPut(data[j])):
-                        ans.append([opt(data[j]),data[j].get("date_gmt")])
-                        break
+                        if(not exp(data[j])=="01/02/1970"):
+                            ans.append([opt(data[j]),data[j].get("date_gmt")])
+                            break
     return ans
 #N.B. YOU CAN RUN THIS THROUGH GOODIDEA4
 
@@ -411,6 +462,8 @@ def criteriastocks(day,critt):  #runs through all the criteria in critt and gets
                 else:
                     if(not unpack(k+[data]+[a])):
                         broke = False
+        if(i in banned):
+            broke = False
         if(len(a)>0):
             if(broke):
                 if(majoritycall(data,a)):
@@ -451,15 +504,16 @@ def uniquell(x):       #gets rid of duplicate elements in a list of lists
 def optscrit(day,critt):        #with support for other days now!!!!
     optsl = criteriaopts(day,{0:critt.get(0)})
     stocksll = []
+    atleast1 = False
     for i in critt:
         todat = day
         if(i>0):
-            
+            atleast1 = True
             for j in range(i):
                 todat = yesterday(day)
                 stocksll.append(criteriastocks(todat,{i: critt.get(i)}))
     #if(unique(stocksll)==[[]]):
-    if(stocksll==[]):
+    if(stocksll==[] and atleast1):
         return []
     #print(stocksll)
     for i in stocksll:
@@ -484,18 +538,102 @@ def optscritweak(day,critt):    #see comments right below this
 
 #the difference is completely nonexistent if your criteria only includes stuff from either 0 or 1 days
 
+def fntodate(fn):   #file name to date
+    return fn.split(re.findall('[^A-Za-z\d -._]',fn)[0])[1].split(".")[0]
+
+def allcritopts(critt):     #get all options which meet criteria critt from ALL TIME!!!!
+    fl = glob.glob("data_flow2/*.json")[-400:]
+    for i in range(len(fl)):
+        fl[i] = fntodate(fl[i])
+    ans = []
+    for i in fl:
+        s = optscrit(i,critt)
+        for j in s:
+            ans.append(j)
+    return ans
+
+def fastallcritopts(critt):
+    fl = glob.glob("data_flow2/*.json")[-400:]
+    for i in range(len(fl)):
+        fl[i] = fntodate(fl[i])
+    ans = []
+    ranlist = random.sample(range(0,len(fl)),30)   #change this if you want more, duh
+    ranlist = [i for i in range(30)]
+    for q in ranlist:
+        i = fl[q]
+
+        s = optscrit(i,critt)
+        for j in s:
+            ans.append(j)
+    return ans
+
+def backtestpro(critt,sg,sl):       #stop gain, stop loss
+    optslist = allcritopts(critt)
+    denom = len(optslist)
+    num = 0
+    for i in optslist:
+        if(goodidea4(i[0],i[1],sg,sl)):
+            num += 1
+    if(denom==0):
+        return 0.0
+    return float(num)/float(denom)
+
+def fastbacktestpro(critt,sg,sl):        #stop gain, stop loss
+    optslist = fastallcritopts(critt)
+    optslist2 = []
+    denom = len(optslist)
+    num = 0
+    for i in optslist:
+        print(i)
+        if(goodidea4(i[0],i[1],sg,sl)):
+            num += 1
+    if(denom==0):
+        return 0.0
+    return float(num)/float(denom)
+
+
 
 
 if __name__=="__main__":
     #the length of a typical flowalgo dataset is 100-1000 JSON datasets. 
     #So, we don't have to care too hard about optimization.
-    #data = flowdata('2004-01-13')
-    #p = criteriaopts('2020-01-13',{0: ctest2.get(0)})
+    data = flowdata('2020-01-13')
+   
     #s = criteriastocks('2020-01-13',ctest2.get(0))
     ctest3 = {
-        0: [[intersect,[[smallesttie, expts, gt],[smallestn, orderts,gt,4],[filter,voi]]],
+        0: [[intersect,[[smallesttie, expts, gt],[smallestn, orderts,gt,4],[union, [[filter, voi], [filter, isSplit]]]]],
             [allof,[[atleastn, betAtLeast100K, 1],[atleastn, betAtLeast50K, 2],[oneof,[[atleastn,isPut,3],[atleastn,isCall,3]]]]]],
 
         1: [[intersect,[[filter,voi]]]]
     }
-    print(optscrit("2020-01-13",ctest3))
+    ctest2 = {
+        0: [[intersect,[[smallesttie, expts, gt],[smallestn, orderts,gt,4],[union, [[filter, voi], [filter, isSplit]]]]],
+            [allof,[[atleastn, betAtLeast100K, 2],[atleastn, betAtLeast50K, 4],[oneof,[[atleastn,isPut,3],[atleastn,isCall,3]]]]]]
+    }
+    ctest4 = {
+        0: [[intersect,[[smallesttie, expts, gt],[smallestn, orderts,gt,4],[filter, voi]]],
+            [allof,[[atleastn, betAtLeast100K, 1],[atleastn, betAtLeast50K, 2],[oneof,[[atleastn,isPut,3],[atleastn,isCall,3]]]]]]
+    }
+    p = criteriaopts('2020-01-14',{0: ctest2.get(0)})
+    print(p)
+    p = criteriaopts('2020-01-14',{0: ctest4.get(0)})
+    print(p)
+    #print(optscrit("2017-08-07",ctest2))
+
+    #print(data[0])
+    #for i in data:
+    #    print(i.get("acf").get("option_open_interest"))
+    #print(allcritopts(ctest2))
+    #print(flowdata('2017-06-02'))
+    s = time.time()
+    print(fastbacktestpro(ctest2,0.3,0.5))
+    e = time.time()
+    print(e-s)
+    print("")
+    #data = flowdata('2017-10-20')
+    #print(goodidea4(o[0],o[1],0.3,0.5))
+    #print(cftoopt('01/24/2020 NIO 6 P'))
+    #for i in range(len(data)):
+    #    if(data[i].get("acf").get("flow_ticker")=="SPY"):
+    #        print(data[i])
+    
