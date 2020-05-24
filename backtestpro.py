@@ -132,19 +132,19 @@ def isPut(row):
 #SO TECHNICALLY YOU GOTTA DO FOR KEY IN DAYSTOCKS(DF) BUT THAT'S NOT SO HARD
 #NB:
 
-def filter(df,rl,crit):    #N.B. you'll need something like betatleast1 = lambda row : betAtLeast(row,5000)
+def filter(crit,df,rl):    #N.B. you'll need something like betatleast1 = lambda row : betAtLeast(row,5000)
     ans = []                #'cause filter(a,b,blah(5,row)) doesn't work well
     for i in rl:
         if(crit(df[i])):
             ans.append(i)
     return ans
 
-def atleastn(df,rl,crit,n):
-    if(len(filter(df,rl,crit))>=n):
+def atleastn(crit,n,df,rl):
+    if(len(filter(crit,df,rl))>=n):
         return True
     return False
 
-def smallesttie(data,rl,qt,comp):      #gets all guys who are tied with the smallest thing
+def smallesttie(qt,comp,data,rl):      #gets all guys who are tied with the smallest thing
     ans = rl
     ans2 = []
     for i in ans:
@@ -161,7 +161,7 @@ def smallesttie(data,rl,qt,comp):      #gets all guys who are tied with the smal
             ans4.append(i)
     return ans4
 
-def biggesttie(data,rl,qt,comp):      #gets all guys who are tied with the smallest thing
+def biggesttie(qt,comp,data,rl):      #gets all guys who are tied with the smallest thing
     ans = rl
     ans2 = []
     for i in ans:
@@ -180,7 +180,7 @@ def biggesttie(data,rl,qt,comp):      #gets all guys who are tied with the small
     return ans4
 
 
-def smallestn(data,rl,qt,comp,n):      #smallest n indices compared by blah blah blah
+def smallestn(qt,comp,n,data,rl):      #smallest n indices compared by blah blah blah
     ans = rl
     ans2 = []
     for i in ans:
@@ -192,7 +192,7 @@ def smallestn(data,rl,qt,comp,n):      #smallest n indices compared by blah blah
             ans3.append(i)
     return ans3
 
-def largestn(data,rl,qt,comp,n):
+def largestn(qt,comp,n,data,rl):
     ans = rl
     ans2 = []
     for i in ans:
@@ -208,11 +208,6 @@ def largestn(data,rl,qt,comp,n):
 
 #i got a bit lazy here
 #############################################################################
-def intersect(data,rl,flist):      #apply multiple criteria (in a list) to a stock
-    ans = []
-    for i in flist:
-        ans.append(filter(data,rl,i))
-    return list(set(ans[0]).intersection(*ans))
 
 def majoritycall(data,rl):          #are the majority of rows calls?
     j = 0
@@ -223,6 +218,65 @@ def majoritycall(data,rl):          #are the majority of rows calls?
     if(float(j/l)>0.5):
         return True
     return False
+
+def union(flist,data,rl):               #finds the union of the output of a bunch of criteria (see applycrit a few lines down)
+    ans = []
+    for i in flist:
+        ans.append(applycrit(i,data,rl))
+    return unique(flatten(ans))
+
+def intersect(flist,data,rl):           #finds the INTERSECTION of a bunch of criteria by APPLYING THE FIRST CRITERIA, THEN APPLYING THE SECOND, ...
+    ans = []
+    if(len(rl)==0):
+        return []
+    if(len(flist)==0):
+        return []
+    ans = applycrit(flist[0],data,rl)
+    for i in flist:
+        ans = applycrit(i,data,ans)
+    return ans
+
+def intersectASYNC(flist,data,rl):           #finds the intersection of a bunch of criteria by applying each one to an index list and then intersecting the result
+    ans = []
+    for i in flist:
+        ans.append(applycrit(i,data,rl))
+    return lintersect(ans)
+
+def allof(flist,data,rl):               #checks if EVERY criteria is true
+    for i in flist:
+        if(not applycrit(i,data,rl)):
+            return False
+    return True
+
+def oneof(flist,data,rl):
+    for i in flist:
+        if(applycrit(i,data,rl)):
+            return True
+    return False
+
+def applycrit(c,data,rl):               #applies the criteria [maincrit,<some other args] with data data, indices list rl.
+    c = tuple(c)+(data,rl)
+    return unpack(c)
+
+def unique(l):
+    return list(set(l))
+
+def intersection(*d):
+    sets = iter(map(set, d))
+    result = sets.next()
+    for s in sets:
+        result = result.intersection(s)
+    return result
+
+def lintersect(l):      #intersection of a list of lists
+    return list(set(l[0]).intersection(*l))
+
+def flatten(l):
+    return [item for sublist in l for item in sublist]
+
+
+def unpack(l):          #given: [func,a,b,c,d,...] runs f(a,b,c,d,...)
+    return l[0](*tuple(l[1:]))
 
 #############################################################################
 def goodidea4(stonk,ts,g,l):     #oh yeah? WAS IT?     #option (in cf format, "6-19-2020 BLAH 67.5 C"), timestamp (in date format, "2020-04-29T03:30:35"), stop gain %, stop loss %
@@ -273,13 +327,13 @@ def criteriatest(sl):           #in which we test that the functions can actuall
     for i in df:    #THIS IS IT, EVERYBODY!!! WE'RE LOOPING OVER ALL THE STOCKS!!!!!!!!
         stock = i
         indi = df.get(i)
-        indi2 = smallesttie(data,indi,expts,gt)
-        indi3 = smallestn(data,indi2,orderts,gt,4)
-        indi4 = filter(data,indi3,voi)
-        indi5 = atleastn(data,indi4,betAtLeast100K,1)
-        indi6 = atleastn(data,indi4,betAtLeast50K,2)
-        indi7 = atleastn(data,indi4,isCall,3)
-        indi8 = atleastn(data,indi4,isPut,3)
+        indi2 = smallesttie(expts,gt,data,indi)
+        indi3 = smallestn(orderts,gt,4,data,indi2)
+        indi4 = filter(voi,data,indi3)
+        indi5 = atleastn(betAtLeast100K,1,data,indi4)
+        indi6 = atleastn(betAtLeast50K,2,data,indi4)
+        indi7 = atleastn(isCall,3,data,indi4)
+        indi8 = atleastn(isPut,3,data,indi4)
         if(indi5 and indi6 and indi7):
             for j in indi4:
                 if(isCall(data[j])):
@@ -296,20 +350,43 @@ def criteriatest(sl):           #in which we test that the functions can actuall
 
 
 def criteriatest2(day):  #in which we try to automatically run through criteria
-    c_test = {
-        'init': [],
-        0: [[smallesttie,orderts,gt,True],[smallestn],[atleastn,isSweep,1],[voi,True],[betAtLeast100K,3],[betAtLeast50K,4]]
+    data = flowdata('2020-01-13')
+    ans = []
+    ctest2 = {
+        0: [[intersect,[[smallesttie, expts, gt],[smallestn, orderts,gt,4],[filter,voi]]],
+            [allof,[[atleastn, betAtLeast100K, 1],[atleastn, betAtLeast50K, 2],[oneof,[[atleastn,isPut,3],[atleastn,isCall,3]]]]]]
     }
+    crittie = ctest2.get(0)
+    #data = sl
+    df = daystocks(data)
+    for i in df:
+        stock = i
+        rl = df.get(i)
+        #df.get(i) returns rl
+        a = unpack(crittie[0] + [data] + [rl])
+        if(unpack(crittie[1] + [data] + [a])):
+            if(majoritycall(data,a)):
+                for j in a:
+                    if(isCall(data[j])):
+                        ans.append([opt(data[j]),data[j].get("date_gmt")])
+                        break
+            else:
+                for j in a:
+                    if(isPut(data[j])):
+                        ans.append([opt(data[j]),data[j].get("date_gmt")])
+                        break
+    return ans
+#N.B. YOU CAN RUN THIS THROUGH GOODIDEA4
 
-def unpack(l):
-    return l[0](*tuple(l[1:]))
+
+
 
 if __name__=="__main__":
     #the length of a typical flowalgo dataset is 100-1000 JSON datasets. 
     #So, we don't have to care too hard about optimization.
     data = flowdata('2020-01-13')
 
-    s = criteriatest(data)
+    s = criteriatest2(data)
     print(s)
     #for i in s:
     #    if(goodidea4(i[0],i[1],0.1,0.5)):
