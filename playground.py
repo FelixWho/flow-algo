@@ -83,6 +83,11 @@ def prp(n,g,s,p,x,d): #jesus.
             ans += p**i*(1-p)**(n-i)*scipy.special.binom(n,i)
     return ans
 
+
+###################
+#CRIT: THE criteria, i.e. which dict, i.e. the probabilities.
+#g is the gain percent (PUT 50, NOT 0.5), s is stop loss
+#n is number of guys, x is profix multiplier (0.5 means 1.5x profit on initial investment)
 def bestd(crit,g,s,n,x):   #GAY SEX
     dl = [0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.6,0.7,0.8,0.9,1.0]
     p = prob(crit,g,s)
