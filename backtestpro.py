@@ -180,6 +180,8 @@ def rowoneof(flist,data,rl):
             return True
     return False
 
+def exist(row):
+    return True
 #check the functions in fadata.py for more fun stuff!
 
 #############################################################################
@@ -204,6 +206,8 @@ def atleastn(crit,n,df,rl):
     if(len(filter(crit,df,rl))>=n):
         return True
     return False
+
+
 
 def smallesttie(qt,comp,data,rl):      #gets all guys who are tied with the smallest thing
     ans = rl
@@ -276,6 +280,8 @@ def majoritycall(data,rl):          #are the majority of rows calls?
     for i in rl:
         if(isCall(data[i])):
             j += 1
+    if(l==0):
+        return False
     if(float(j/l)>0.5):
         return True
     return False
@@ -372,9 +378,10 @@ def goodidea5(jsob,g,l):
     span = int((1000*time.time()-ts)/(1000*3600*24))      #A*?????????? NO WAY!!!!!!!!!
     chartlen = stretchdist(span)
     sticklen = candlelen(chartlen)
-
     td = getChartDf(stonk, sticklen, chartlen)  #THEDATA
+    print(td)
     ts = closestts(td,ts)
+    print(ts)
     p = 0.0
     for i in range(len(td)):
         r = td.iloc[i]
@@ -587,7 +594,8 @@ def fntodate(fn):   #file name to date
     return fn.split(re.findall('[^A-Za-z\d -._]',fn)[0])[1].split(".")[0]
 
 def allcritopts(critt):     #get all options which meet criteria critt from ALL TIME!!!!
-    fl = glob.glob("data_flow2/*.json")[-400:]
+    fl = glob.glob("data_flow2/*.json")[-62:-60]
+
     for i in range(len(fl)):
         fl[i] = fntodate(fl[i])
     ans = []
@@ -598,12 +606,13 @@ def allcritopts(critt):     #get all options which meet criteria critt from ALL 
     return ans
 
 def fastallcritopts(critt):
-    fl = glob.glob("data_flow2/*.json")[-400:]
+    fl = glob.glob("data_flow2/*.json")[-160:-60]
+
     for i in range(len(fl)):
         fl[i] = fntodate(fl[i])
     ans = []
-    ranlist = random.sample(range(0,len(fl)),50)   #change this if you want more, duh
-    ranlist = [i for i in range(30)]
+    ranlist = random.sample(range(0,len(fl)),100)   #change this if you want more, duh
+    #ranlist = [i for i in range(30)]
     for q in ranlist:
         i = fl[q]
 
@@ -621,7 +630,7 @@ def backtestpro(critt,sg,sl):       #stop gain, stop loss
             num += 1
     if(denom==0):
         return 0.0
-    return float(num)/float(denom)
+    return str(float(num)/float(denom))+"     "+str(num)+"/"+str(denom)
 
 def fastbacktestpro(critt,sg,sl):        #stop gain, stop loss
     optslist = fastallcritopts(critt)
@@ -642,8 +651,8 @@ def fastbacktestpro(critt,sg,sl):        #stop gain, stop loss
 if __name__=="__main__":
     #the length of a typical flowalgo dataset is 100-1000 JSON datasets. 
     #So, we don't have to care too hard about optimization.
-    data = flowdata('2020-01-13')
-   
+    data = flowdata('2020-04-29')
+    print(goodidea5(data[3],0.1,0.5))
     #s = criteriastocks('2020-01-13',ctest2.get(0))
     ctest3 = {
         0: [[intersect,[[smallesttie, expts, gt],[smallestn, orderts,gt,4],[union, [[filter, voi], [filter, isSplit]]]]],
@@ -665,29 +674,25 @@ if __name__=="__main__":
         [allof,[[atleastn,betAtLeast100K,3],[atleastn,betAtLeast50K,4],[atleastn,isSweep,1],[oneof,[[atleastn,isPut,3],[atleastn,isPut,3]]]]]]
 
     }
-    
 
+    kikiGEvar = {
+        0: [[intersect,[[smallesttie,expts,gt],[smallestn,orderts,gt,4]]],
+            [allof,[[atleastn,betAtLeast50K,4],[atleastn,betAtLeast100K,3],[oneof, [[atleastn, voi, 1],[atleastn, isSplit, 1]]],[oneof, [[atleastn, isPut, 3],[atleastn, isCall, 3]]]]]]
+        
+    }
 
-    #p = criteriaopts('2020-01-14',{0: ctest2.get(0)})
-    #print(p)
-    #p = criteriaopts('2020-01-14',{0: kikiLEvar.get(0)})
-    #print(p)
-    #print(optscrit("2017-08-07",ctest2))
+    voiguy = {
+        0: [[intersect,[[filter,voi]]]]
+    }
 
-    #print(data[0])
-    #for i in data:
-    #    print(i.get("acf").get("option_open_interest"))
-    #print(allcritopts(ctest2))
     #print(flowdata('2017-06-02'))
-    s = time.time()
-    print(backtestpro(kikiLEvar,0.3,0.5))
-    e = time.time()
-    print(e-s)
-    print("")
-    #data = flowdata('2017-10-20')
-    #print(goodidea4(o[0],o[1],0.3,0.5))
-    #print(cftoopt('01/24/2020 NIO 6 P'))
-    #for i in range(len(data)):
-    #    if(data[i].get("acf").get("flow_ticker")=="SPY"):
-    #        print(data[i])
+    #print(backtestpro(voiguy,0.3,0.5))
+    #glist = [0.2,0.3,0.4,0.5,0.6]
+    #slist = [0.3,0.4,0.5,0.6,0.7]
+    #for i in glist:
+        #for j in slist:
+            #print("---------")
+            #print("stop: "+str(i))
+            #print("gain: "+str(j))
+            #print(backtestpro(voiguy,i,j))
     
