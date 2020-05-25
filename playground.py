@@ -4,7 +4,7 @@
 #note that the numbers in pr(g) are verrrrry rough (derived from kiki's backtesting in january)
 #obviously we're going to want muchhhhh better numbers for ourselves
 #the purpose of this file is to play around and see which stop losses and stop gains are best given some probabilities and profit we want
-
+import re
 import math
 import scipy.special
 import random
@@ -34,18 +34,8 @@ p = pr(g)
 
 def prob(crit,g,l):
     key = str([g,l])    #the most ratchet way to do this..
-    if(crit=="akhil1"):
-        bleg = {
-            "[50, 30]":49/76,
-            "[75, 40]":40/76,
-            "[125, 50]":39/76,
-            '[150, 50]':28/76,
-            '[200, 50]':10/76
-        }
-        return bleg.get(key)
-    return 0
-
-
+    key = "P"+str(g)+"L"+str(l)
+    return float(crit.get(key))/float(crit.get('totalOrders'))
 
 def prp(n):        #if we make n trades in total
     global g
@@ -100,17 +90,35 @@ def bestd(crit,g,s,n,x):   #GAY SEX
             m = newp
     return dans
 
-def bestdp(crit,g,s,n,x):
+def bestdp(crit,g,s,n,x):   #criteria, finds best probability
     p = prob(crit,g,s)
     return prp(n,g,s,p,x,bestd(crit,g,s,n,x))
 
-print(bestd("akhil1",50,30,100,1000.0))
-print(bestdp("akhil1",50,30,100,1000.0))
+def bestpl(dick,n,x):   #given a dictionary ()
+    curd = 0
+    curp = 0
+    curg = 0
+    curs = 0
+    for i in dick:
+        if(not i=='totalOrders'):
+            gl = re.findall("\d+",i)
+            g = gl[0]
+            s = gl[1]
+            p = prob(dick,int(g),int(s))
+            bd = bestd(dick,g,s,n,x)
+            bdp = prp(n,g,s,p,x,bd)
+            if(bdp > curp):
+                curd = bd
+                curp = bdp
+                curg = g
+                curs = s
 
+    return [curg,curs,curd,curp]
+            
 
-
+#print(bestd("akhil1",50,30,100,1000.0))
+#print(bestdp("akhil1",50,30,100,1000.0))
 
 if __name__=="__main__":
-    #print(prp(30))     #if we make 100 trades in total what's our probability of profit?
-    print("")
-    #print(p12(49,76,40,76))
+    aku1 = {'totalOrders': 76,'P25L20': 51, 'P25L25': 55, 'P25L30': 61, 'P25L40': 63, 'P25L50': 65, 'P25L75': 66, 'P25L95': 66, 'P50L20': 43, 'P50L25': 47, 'P50L30': 49, 'P50L40': 52, 'P50L50': 53, 'P50L75': 55, 'P50L95': 55, 'P75L20': 25, 'P75L25': 34, 'P75L30': 39, 'P75L40': 40, 'P75L50': 41, 'P75L75': 45, 'P75L95': 45, 'P100L20': 24, 'P100L25': 33, 'P100L30': 38, 'P100L40': 39, 'P100L50': 40, 'P100L75': 44, 'P100L95': 44, 'P125L20': 24, 'P125L25': 33, 'P125L30': 38, 'P125L40': 38, 'P125L50': 39, 'P125L75': 40, 'P125L95': 40, 'P150L20': 21, 'P150L25': 23, 'P150L30': 24, 'P150L40': 27, 'P150L50': 28, 'P150L75': 29, 'P150L95': 29, 'P200L20': 3, 'P200L25': 5, 'P200L30': 8, 'P200L40': 8, 'P200L50': 9, 'P200L75': 10, 'P200L95': 10, 'P400L20': 0, 'P400L25': 0, 'P400L30': 0, 'P400L40': 0, 'P400L50': 0, 'P400L75': 0, 'P400L95': 0}
+    print(bestpl(aku1,100,10)) 
